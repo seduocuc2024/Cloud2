@@ -1,12 +1,29 @@
-FROM maven:3.8.4-openjdk-11-slim AS build
-WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline
-COPY src ./src
-RUN mvn package -DskipTests
+FROM mcr.microsoft.com/azure-functions/java:4-java17-build AS build-env
 
-FROM openjdk:11-jre-slim
+WORKDIR /build
+
+# Copiar archivos de proyecto y compilar
+COPY pom.xml .
+COPY src ./src
+
+RUN apt-get update && apt-get install -y curl gnupg
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash -
+RUN apt-get install -y nodejs
+
+# Instalar Azure Functions Core Tools
+RUN npm install -g azure-functions-core-tools@4 --unsafe-perm true
+RUN mvn clean package -DskipTests
+
+# Imagen final
+FROM eclipse-temurin:17-jre-focal
+
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build-env /build/target/*.jar app.jar
+
+# Variables de entorno para conectar con las funciones
+ENV USER_FUNCTION_URL=http://user-function:8080
+ENV ROLE_FUNCTION_URL=http://role-function:8080
+
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","app.jar"]

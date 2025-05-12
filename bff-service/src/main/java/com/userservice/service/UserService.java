@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Arrays;
 import java.util.Collections;
 
-import java.util.Arrays;
+
 import java.util.List;
 
 @Service
@@ -62,8 +62,21 @@ public class UserService {
         return restTemplate.getForObject(userFunctionUrl + "/" + id, UserDTO.class);
     }
     
-    public UserDTO createUser(UserDTO userDTO) {
-        return restTemplate.postForObject(userFunctionUrl, userDTO, UserDTO.class);
+    public UserDTO createUser(UserDTO userDTO) throws Exception {
+        try {
+            logger.info("Intentando crear usuario: {}", userDTO);
+            
+            // Log del JSON que se va a enviar
+            ObjectMapper mapper = new ObjectMapper();
+            logger.info("JSON enviado: {}", mapper.writeValueAsString(userDTO));
+            
+            UserDTO createdUser = restTemplate.postForObject(userFunctionUrl, userDTO, UserDTO.class);
+            logger.info("Usuario creado correctamente: {}", createdUser);
+            return createdUser;
+        } catch (Exception e) {
+            logger.error("Error al crear usuario: {}", e.getMessage(), e);
+            throw e;
+        }
     }
     
     public UserDTO updateUser(Long id, UserDTO userDTO) {
@@ -93,7 +106,7 @@ public class UserService {
     }
     
     // Método para crear un usuario con roles
-    public UserDTO createUserWithRoles(UserDTO userDTO, List<Long> roleIds) {
+    public UserDTO createUserWithRoles(UserDTO userDTO, List<Long> roleIds) throws Exception {
         // Primero creamos el usuario
         UserDTO createdUser = createUser(userDTO);
         
